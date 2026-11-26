@@ -1,0 +1,1026 @@
+<title>Co-op 投递台</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: drafting-table workspace. Board = parts schedule of postings; job view = requirement terminal strip (left) beside a paper resume sheet (right). */
+:root{
+  --bg:#f2f3f0; --surface:#ffffff; --sunk:#e9ebe6; --ink:#1a2028; --muted:#5b6570; --line:#d9ddd5;
+  --accent:#2557cf; --accent-soft:#e3eafb; --accent-ink:#ffffff;
+  --ok:#2c7a4b; --ok-soft:#e1f1e7; --warn:#9a6300; --warn-soft:#f9eed6; --bad:#b33d2c; --bad-soft:#f7e1dc;
+  --paper:#fdfdfb; --paper-ink:#111418; --paper-muted:#4a525b; --paper-line:#c9cdc6; --lit:#fff1a8;
+  --sans:"IBM Plex Sans","PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --resume:Arial,Helvetica,"Liberation Sans",sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13161b; --surface:#1b1f26; --sunk:#232830; --ink:#e6e9ee; --muted:#9aa3ae; --line:#2d333c;
+  --accent:#86a6ff; --accent-soft:#1e2944; --accent-ink:#0d1220;
+  --ok:#6cc48e; --ok-soft:#163023; --warn:#e3b45c; --warn-soft:#382a10; --bad:#ff8b79; --bad-soft:#3b1d18;
+  --paper:#f7f7f3; --paper-ink:#111418; --paper-muted:#4a525b; --paper-line:#c9cdc6; --lit:#ffe98a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13161b; --surface:#1b1f26; --sunk:#232830; --ink:#e6e9ee; --muted:#9aa3ae; --line:#2d333c;
+  --accent:#86a6ff; --accent-soft:#1e2944; --accent-ink:#0d1220;
+  --ok:#6cc48e; --ok-soft:#163023; --warn:#e3b45c; --warn-soft:#382a10; --bad:#ff8b79; --bad-soft:#3b1d18;
+  --paper:#f7f7f3; --paper-ink:#111418; --paper-muted:#4a525b; --paper-line:#c9cdc6; --lit:#ffe98a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans);margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+a{color:var(--accent)}
+button,select,textarea,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1380px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;padding-block:12px}
+.brand{font-weight:700;font-size:19px;letter-spacing:.01em;display:flex;align-items:baseline;gap:10px}
+.brand small{font:500 12px var(--mono);color:var(--muted);letter-spacing:.04em}
+.runline{margin-left:auto;font:12.5px var(--mono);color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px}
+.runline b{color:var(--ink);font-weight:500}
+main{padding-block:20px 60px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px;cursor:pointer;text-decoration:none;color:var(--ink);font-size:14px;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:600}
+.btn.small{padding:4px 9px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;padding:2px 8px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.warn{background:var(--warn-soft);color:var(--warn)} .chip.bad{background:var(--bad-soft);color:var(--bad)} .chip.acc{background:var(--accent-soft);color:var(--accent)}
+.mono{font-family:var(--mono)}
+.muted{color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+.notice{border-radius:8px;padding:10px 14px;font-size:14px}
+.ana{padding:12px 16px 14px;display:grid;gap:12px;font-size:14px}
+.ana h4{margin:0 0 4px;font-size:14.5px}
+.ana ul{margin:0;padding-left:18px;display:grid;gap:3px}
+.ana .verdict{font-weight:600;font-size:15px}
+.edu{display:grid;gap:6px;margin-top:8px}
+.edu .lab{font-size:12px;font-weight:600;letter-spacing:.02em;opacity:.85}
+.edu blockquote{margin:0;padding:6px 10px;border-left:3px solid currentColor;background:var(--surface,#fff);color:var(--ink);border-radius:0 6px 6px 0;font-size:14px;line-height:1.45}
+.edu details{font-size:13px;opacity:.9}.edu summary{cursor:pointer}
+.notice.warn{background:var(--warn-soft);color:var(--warn)} .notice.bad{background:var(--bad-soft);color:var(--bad)} .notice.ok{background:var(--ok-soft);color:var(--ok)} .notice.info{background:var(--accent-soft);color:var(--accent)}
+
+/* board */
+.summary{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.summary .stat{display:flex;flex-direction:column;padding:8px 14px;border-left:3px solid var(--line);min-width:84px}
+.summary .stat b{font:600 22px var(--mono);font-variant-numeric:tabular-nums}
+.summary .stat span{font-size:12.5px;color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:10px 14px;margin-bottom:14px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 12px;cursor:pointer;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.controls label{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
+.controls select{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:5px 8px}
+.list{display:flex;flex-direction:column;gap:10px}
+.row{display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:16px;align-items:center;padding:14px 16px}
+.row:hover{border-color:var(--accent)}
+.row.expired{opacity:.62}
+.row.expired:hover{opacity:1}
+.listsep{margin:6px 2px 0;font-size:13px;font-weight:600;color:var(--muted)}
+.dial{width:64px;height:64px;position:relative;display:grid;place-items:center}
+.dial svg{position:absolute;inset:0}
+.dial b{font:600 20px var(--mono);font-variant-numeric:tabular-nums}
+.dial i{position:absolute;bottom:-6px;font:normal 10px var(--mono);color:var(--muted);background:var(--surface);padding:0 3px}
+.row h3{margin:0 0 2px;font-size:16.5px;line-height:1.35;text-wrap:balance}
+.row .co{font-weight:600;color:var(--muted);font-size:14px}
+.row .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.row .act{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.pill{font:600 12px var(--mono);padding:3px 9px;border-radius:6px;letter-spacing:.03em}
+.pill.new{background:var(--accent-soft);color:var(--accent)} .pill.reviewing{background:var(--warn-soft);color:var(--warn)} .pill.approved{background:var(--ok-soft);color:var(--ok)} .pill.applied{background:var(--ok);color:#fff} .pill.skipped{background:var(--sunk);color:var(--muted)}
+details.box{margin-top:18px}
+details.box>summary{cursor:pointer;padding:12px 16px;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
+details.box>summary::before{content:"▸";font-family:var(--mono);color:var(--muted);transition:transform .15s}
+details.box[open]>summary::before{transform:rotate(90deg)}
+.excl{padding:0 16px 14px;display:grid;gap:8px}
+.excl div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px;font-size:14px;border-top:1px dashed var(--line);padding-top:8px}
+.qs{padding:0 16px 16px;display:grid;gap:14px}
+.q{display:grid;gap:6px;border-top:1px dashed var(--line);padding-top:12px}
+.q .why{font-size:13px;color:var(--muted)}
+.q textarea{width:100%;min-height:54px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);resize:vertical}
+.q .qa{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* job view */
+.jobhead{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:flex-start;margin-bottom:16px}
+.jobhead h2{margin:0;font-size:22px;line-height:1.3;text-wrap:balance}
+.jobhead .co{color:var(--muted);font-weight:600}
+.jobhead .right{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);gap:18px;align-items:start}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.facts{padding:14px 16px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;font-size:14px}
+.facts dt{color:var(--muted)} .facts dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.pathbox{display:flex;gap:8px;align-items:center;background:var(--sunk);border-radius:7px;padding:6px 8px;font:12px var(--mono);overflow-wrap:anywhere}
+.pathbox span{min-width:0;flex:1}
+.score{padding:14px 16px;display:grid;gap:8px}
+.bar{display:grid;grid-template-columns:44px minmax(0,1fr) 56px;gap:10px;align-items:center;font-size:13px}
+.bar .t{height:8px;border-radius:4px;background:var(--sunk);overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.bar .n{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}
+.reqs{padding:6px 0 10px}
+.reqs h4{margin:12px 16px 6px;font:600 12px var(--mono);letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.req{display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px;padding:8px 16px 8px 12px;border-left:4px solid transparent;cursor:default;transition:background .12s}
+.req.strong{border-left-color:var(--ok)} .req.partial{border-left-color:var(--warn)} .req.gap{border-left-color:var(--bad)}
+.req .id{font:600 12px var(--mono);padding-top:2px}
+.req.strong .id{color:var(--ok)} .req.partial .id{color:var(--warn)} .req.gap .id{color:var(--bad)}
+.req .tx{font-size:14.5px}
+.req .nt{font-size:13px;color:var(--muted);margin-top:2px}
+.req .cov{font:11.5px var(--mono);margin-top:3px}
+.req .cov.yes{color:var(--ok)} .req .cov.no{color:var(--muted)}
+.req.lit,.req:hover{background:var(--accent-soft)}
+
+.tool{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px}
+.tool select{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:5px 8px;max-width:220px}
+.tool .sp{flex:1}
+.sheetwrap{background:var(--sunk);border-radius:var(--r);padding:14px}
+.paper{container-type:inline-size;background:var(--paper);color:var(--paper-ink);box-shadow:0 1px 3px rgba(0,0,0,.12),0 6px 24px rgba(0,0,0,.06);border-radius:2px}
+.paper .pg{font-family:var(--resume);font-size:calc(100cqw * 10 / 612);line-height:1.28;padding:4em 4.2em;min-height:calc(100cqw * 11 / 8.5)}
+.paper .ltr{font-family:var(--resume);font-size:calc(100cqw * 10.5 / 612);line-height:1.42;padding:5em 5.6em}
+.ltr p{margin:0 0 .95em}
+.ltr .lh b{font-size:1.5em}
+.ltr .lh{border-bottom:1.2px solid var(--paper-ink);padding-bottom:.5em;margin-bottom:1.4em}
+.ltr .lh span{display:block;color:var(--paper-muted);font-size:.92em;margin-top:.2em}
+.pg .nm{font-size:1.9em;font-weight:700;letter-spacing:.01em;line-height:1.1}
+.pg .ct{font-size:.92em;color:var(--paper-muted);margin-top:.3em;padding-bottom:.6em;border-bottom:1.4px solid var(--paper-ink)}
+.pg h5{font-size:1.02em;font-weight:700;letter-spacing:.09em;text-transform:uppercase;margin:1.05em 0 .35em;padding-bottom:.15em;border-bottom:.6px solid var(--paper-line)}
+.pg ul{margin:0;padding-left:1.15em}
+.pg li{margin:.12em 0}
+.pg .sk{margin:.12em 0}
+.pg .sm{margin-top:.7em}
+.pg .pn{color:var(--paper-muted);font-style:italic;margin-bottom:.1em}
+.pg .sk b{font-weight:700}
+.pg .pt{margin:.55em 0 .1em}
+.pg .pt b{font-weight:700}
+.pg .pt span{color:var(--paper-muted)}
+.pg .er{display:flex;justify-content:space-between;gap:1em;margin-top:.15em}
+.pg .er b{font-weight:700}
+.pg [data-r]{border-radius:2px;transition:background .12s}
+.pg [data-r].lit{background:var(--lit)}
+.pg [data-r]:hover{background:var(--lit)}
+.pg .diffnew{background:#d9f2df}
+.fit{font:12px var(--mono);margin-top:8px}
+.chat{padding:12px 14px;display:grid;gap:10px}
+.chat textarea{width:100%;min-height:72px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--bg);resize:vertical}
+.chat .row2{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.chat label{font-size:13.5px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.reply{border-left:3px solid var(--accent);padding:8px 12px;background:var(--accent-soft);border-radius:0 8px 8px 0;font-size:14px;white-space:pre-wrap}
+.diff{display:grid;gap:6px;font-size:13px}
+.diff div{display:grid;gap:2px;border-top:1px dashed var(--line);padding-top:6px}
+.diff del{color:var(--bad);text-decoration:line-through} .diff ins{color:var(--ok);text-decoration:none}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:14px;z-index:20;max-width:calc(100vw - 32px)}
+.jobtop{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:start;margin-bottom:16px}
+@media (min-width: 961px){.split>.col{position:sticky;top:calc(env(safe-area-inset-top,0px) + 58px);max-height:calc(100vh - 72px);overflow-y:auto;overscroll-behavior:contain;padding-bottom:8px}}
+@media (max-width: 960px){.split{grid-template-columns:minmax(0,1fr)}.jobtop{grid-template-columns:minmax(0,1fr)}}
+@media (max-width: 620px){
+  .row{grid-template-columns:56px minmax(0,1fr)}
+  .row .act{grid-column:1/-1;flex-direction:row;justify-content:flex-end;flex-wrap:wrap}
+  .dial{width:52px;height:52px}
+  .excl div{grid-template-columns:minmax(0,1fr)}
+  .runline{margin-left:0}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<header class="top"><div class="wrap">
+  <div class="brand">Co-op 投递台 <small>CHENGZHANG LYU · EET · 2027</small></div>
+  <div class="runline" id="runline"><span>读取数据中…</span></div>
+</div></header>
+
+<main class="wrap" id="app">
+  <div class="empty" id="boot">正在连接岗位数据库。岗位、简历和你的审核状态都存在这里，Claude 每周五晚上会往里加新岗位。</div>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="backend.js"></script>
+<script>
+(() => {
+"use strict";
+const S = { jobs: {}, resumes: {}, meta: {}, questions: {}, requests: {}, letters: {}, analysis: {}, loaded: false,
+  sort: "match", fStatus: "all", fRegion: "all", fElig: "all", fSrc: "all", hideSkipped: true, hideExpired: true, showTags: false, boxOpen: {} };
+const ST = { new: "新", reviewing: "待修改", approved: "已通过", applied: "已投递", skipped: "跳过" };
+const LVL = { strong: "有证据", partial: "部分", gap: "缺口" };
+const KIND = { duty: "职责", req: "必需条件", asset: "加分项" };
+const SRC = { school: "学校门户", linkedin: "LinkedIn", indeed: "Indeed", site: "公司官网" };
+function srcOf(j) {
+  const s = (j.source || "") + " " + (j.url || "");
+  return /Experience Centennial|学校门户|experience\.centennialcollege/i.test(s) ? "school"
+    : /linkedin/i.test(s) ? "linkedin" : /indeed/i.test(s) ? "indeed" : "site";
+}
+function me(k){ const p=(S.meta&&S.meta.profile)||{}; return k===2 ? (p.file||"Resume") : k===1 ? (p.short||p.name||"the candidate") : (p.name||"the candidate"); }
+let db = null, sample = null, dl = null, chatCtl = null, pending = null;
+/* generation jobs keep running when you leave a job page; their state lives here so the page shows it when you come back */
+const BUSY = {}, ERR = {};
+const isBusy = (id, k) => !!(BUSY[id] && BUSY[id][k]);
+function setBusy(id, k, on) { BUSY[id] = { ...(BUSY[id] || {}), [k]: on }; }
+function setErr(id, k, msg) { ERR[id] = { ...(ERR[id] || {}), [k]: msg || "" }; }
+const errLine = (id, k) => ERR[id] && ERR[id][k] ? `<div style="color:var(--bad);font-size:13px">上次生成没成功：${esc(ERR[id][k])}</div>` : "";
+const ERRMSG = { cancelled: "已停止", not_granted: "没有授权网页调用 Claude", rate_limited: "调用太频繁或额度用完，稍后再试", invalid_json: "返回的格式没法读，再点一次", shape: "返回的格式不对，再点一次" };
+const errText = e => ERRMSG[e && e.code] || ("出错了：" + ((e && (e.message || e.code)) || ""));
+const jobName = id => (S.jobs[id] ? S.jobs[id].company : id);
+function needsLetter(j) { const t = [(j.flags || []).join(" "), j.source || ""].join(" "); return /cover letter/i.test(t) && !/optional/i.test(t); }
+/* save a generated resume: first one becomes the current version; later ones are kept as a draft until you adopt or discard */
+async function saveGenerated(id, res, meta) {
+  const rd = S.resumes[id];
+  if (!rd || !rd.current) {
+    const day = new Date().toLocaleDateString("zh-CN");
+    await db.collection("resumes").doc(id).set({ jobId: id, current: res.resume, history: [], version_label: `v1 ${day} ${meta.label}`, review: "pending", firstReply: meta.reply || "" });
+    await markReqs(meta.reqIds || [], meta.notDone || []);
+    return "saved";
+  }
+  await db.collection("resumes").doc(id).update({ draft: { resume: res.resume, reply: meta.reply || "", label: meta.label, reqIds: meta.reqIds || [], notDone: meta.notDone || [], at: new Date().toISOString() } });
+  return "draft";
+}
+async function markReqs(ids, notDone) {
+  const day = new Date().toLocaleDateString("zh-CN"), nd = new Map((notDone || []).map(x => [x.id, x.why || "做不到"]));
+  for (const rid of ids) { try { await db.collection("requests").doc(rid).update(nd.has(rid) ? { status: "failed", reply: nd.get(rid) } : { status: "done", reply: "已改进简历（" + day + "）" }); } catch (e) {} }
+}
+try { const s = localStorage.getItem("coopboard.prefs"); if (s) Object.assign(S, JSON.parse(s)); } catch (e) {}
+const savePrefs = () => { try { localStorage.setItem("coopboard.prefs", JSON.stringify({ sort: S.sort, fStatus: S.fStatus, fRegion: S.fRegion, fElig: S.fElig, fSrc: S.fSrc, hideSkipped: S.hideSkipped, hideExpired: S.hideExpired, showTags: S.showTags, boxOpen: S.boxOpen })); } catch (e) {} };
+
+const $ = (sel, el = document) => el.querySelector(sel);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2600); }
+function daysAgo(d) { if (!d) return ""; const n = Math.round((Date.now() - new Date(d + "T12:00:00")) / 864e5); return n <= 0 ? "今天" : n + " 天前"; }
+function daysLeft(d) { const n = Math.ceil((new Date(d + "T23:59:00") - Date.now()) / 864e5); return n; }
+/* deadline with optional time (j.deadlineTime "HH:MM", local); no time = end of that day */
+function dlAt(j) { return j.deadline ? new Date(j.deadline + "T" + (j.deadlineTime || "23:59") + ":00") : null; }
+function isExpired(j) { const t = dlAt(j); return !!t && t.getTime() < Date.now(); }
+function fmtClock(t) {
+  if (!t) return ""; const [h, m] = t.split(":").map(Number); const mm = String(m).padStart(2, "0");
+  if (h === 23 && m === 59) return "晚上 11:59";
+  if (h === 0 && m === 0) return "午夜 0:00";
+  return (h < 12 ? "早上 " + h : h === 12 ? "中午 12" : h < 18 ? "下午 " + (h - 12) : "晚上 " + (h - 12)) + ":" + mm;
+}
+function dlText(j) { return j.deadline + (j.deadlineTime ? " " + fmtClock(j.deadlineTime) : ""); }
+function dlLeft(j) {
+  const t = dlAt(j); if (!t) return ""; const ms = t - Date.now();
+  if (ms < 0) return "已过";
+  const today = new Date(); today.setHours(0, 0, 0, 0); const day = new Date(t); day.setHours(0, 0, 0, 0);
+  const n = Math.round((day - today) / 864e5);
+  if (n === 0) return j.deadlineTime ? "今天截止，剩 " + (ms < 36e5 ? Math.max(1, Math.round(ms / 6e4)) + " 分钟" : Math.floor(ms / 36e5) + " 小时") : "今天截止";
+  return "剩 " + n + " 天";
+}
+async function copyText(text, el) {
+  try { await navigator.clipboard.writeText(text); toast("已复制"); }
+  catch (e) { if (el) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } toast("浏览器不允许直接复制，已选中文字，请按 ⌘C"); }
+}
+
+/* ---------- data ---------- */
+async function boot() {
+  const timer = setTimeout(() => { if (!S.loaded) $("#boot").innerHTML = "岗位数据库没有响应。请检查网络后刷新页面；地址后加 ?debug=1 可以看到原因。"; }, 10000);
+  try { db = await claude.use("db"); } catch (e) { db = null; }
+  if (!db) { clearTimeout(timer); $("#boot").innerHTML = "连不上岗位数据库。请刷新页面；地址后加 ?debug=1 可以看到原因。"; return; }
+  const sub = (name) => db.collection(name).onSnapshot(snap => {
+    const m = {}; snap.docs.forEach(d => { m[d.id] = d.data(); }); S[name] = m;
+    if (name === "jobs") { S.loaded = true; clearTimeout(timer); }
+    render();
+  }, err => { if (name === "jobs") { clearTimeout(timer); $("#app").innerHTML = `<div class="empty">读取失败（${esc(err.code)}）。刷新页面再试。</div>`; } });
+  ["jobs", "resumes", "meta", "questions", "requests", "letters", "analysis"].forEach(sub);
+  claude.use("sample").then(x => { sample = x; if (S.loaded) render(); }).catch(() => {});
+  claude.use("downloads").then(x => { dl = x; if (S.loaded) render(); }).catch(() => {});
+}
+
+/* ---------- router ---------- */
+/* keep the board's scroll position: remember it while on the board, restore it when coming back from a job */
+try { history.scrollRestoration = "manual"; } catch (e) {}
+let boardY = 0; try { boardY = +sessionStorage.getItem("coopboard.y") || 0; } catch (e) {}
+let lastView = null;
+window.addEventListener("scroll", () => {
+  if (lastView !== "board" || route().view !== "board") return;
+  boardY = window.scrollY; try { sessionStorage.setItem("coopboard.y", String(boardY)); } catch (e) {}
+}, { passive: true });
+window.addEventListener("hashchange", () => {
+  pending = null; render();
+  if (route().view === "board") { window.scrollTo(0, boardY); requestAnimationFrame(() => window.scrollTo(0, boardY)); }
+  else window.scrollTo(0, 0);
+});
+function route() { const h = location.hash.slice(1); return h.startsWith("job-") ? { view: "job", id: h.slice(4) } : { view: "board" }; }
+
+function render() {
+  renderRunline();
+  if (!S.loaded) return;
+  const r = route();
+  if (r.view === "job" && S.jobs[r.id]) renderJob(r.id); else renderBoard();
+  lastView = r.view === "job" && S.jobs[r.id] ? "job" : "board";
+}
+
+function renderRunline() {
+  const st = S.meta.status || {};
+  const jobs = Object.values(S.jobs);
+  const openQ = Object.values(S.questions).filter(q => q.status !== "answered").length;
+  $("#runline").innerHTML = `<span>上次搜索 <b>${esc(st.lastSearch || "—")}</b></span><span>下次 <b>${esc(st.nextSearch || "每周五 20:00")}</b></span><span>岗位 <b>${jobs.length}</b></span>${openQ ? `<span>待确认 <b>${openQ}</b></span>` : ""}`;
+}
+
+/* ---------- board ---------- */
+function dial(score, capped) {
+  const r = 27, c = 2 * Math.PI * r, v = Math.max(0, Math.min(100, score));
+  const col = score >= 70 ? "var(--ok)" : score >= 55 ? "var(--accent)" : score > 40 ? "var(--warn)" : "var(--bad)";
+  return `<div class="dial" title="匹配度 ${score}/100${capped ? "（资格不符，封顶 40）" : ""}"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="${r}" fill="none" stroke="var(--sunk)" stroke-width="6"/><circle cx="32" cy="32" r="${r}" fill="none" stroke="${col}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(c * v / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 32 32)"/></svg><b>${score}</b>${capped ? "<i>封顶</i>" : ""}</div>`;
+}
+const SITE_P = { address: "", office: "公司办公地址，实际上班地点可能不同", street: "只定位到这条路", approx: "大概位置", remote: "" };
+function driveShort(j) { const c = j.commuteEst; if (!c) return ""; if (c.drive?.remote) return "远程"; return c.drive ? `开车约 ${c.drive.best} 分钟` : ""; }
+function driveFull(j) {
+  const c = j.commuteEst; if (!c) return esc(j.commute);
+  if (c.drive?.remote) return "远程，不用通勤";
+  const s = c.site || {}, d = c.drive;
+  let t = d ? `估算：不走高速约 ${d.local} 分钟` + (d.hwy ? `；走高速约 ${d.hwy}，高峰约 ${d.peak}+` : "") + `（直线 ${d.km} km）` : "没定位到地址";
+  const link = s.query ? ` <a class="btn small" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.query)}&travelmode=driving" target="_blank" rel="noopener">Google 地图导航 ↗</a>` : "";
+  return `${esc(t)}<div class="muted" style="font-size:13px;margin-top:2px">上班地点：${esc(s.text)}${SITE_P[s.precision] ? "（" + SITE_P[s.precision] + "）" : ""}${link}</div><div class="muted" style="font-size:12px">地址来源：${esc(s.source)}</div>`;
+}
+function eligChip(e) { return e.status === "ok" ? `<span class="chip ok">资格符合</span>` : e.status === "warn" ? `<span class="chip warn">资格有疑问</span>` : `<span class="chip bad">资格不符</span>`; }
+function deadlineChip(j) {
+  if (j.deadline) { const ms = dlAt(j) - Date.now(); return `<span class="chip ${ms < 0 ? "" : ms < 7 * 864e5 ? "bad" : "acc"}">截止 ${esc(dlText(j))}（${dlLeft(j)}）</span>`; }
+  return `<span class="chip">未注明截止 · 发布于${daysAgo(j.posted)}</span>`;
+}
+function sortJobs(list) {
+  const key = j => S.sort === "match" ? -(j.match?.total || 0)
+    : S.sort === "deadline" ? (!j.deadline ? 9e15 - new Date(j.posted || 0).getTime() : isExpired(j) ? 5e15 - dlAt(j).getTime() : dlAt(j).getTime())
+    : -new Date(j.posted || 0).getTime();
+  return list.sort((a, b) => key(a) - key(b) || (b.match?.total || 0) - (a.match?.total || 0));
+}
+function renderBoard() {
+  const jobs = Object.entries(S.jobs).map(([id, j]) => ({ id, ...j }));
+  const counts = {}; jobs.forEach(j => counts[j.status || "new"] = (counts[j.status || "new"] || 0) + 1);
+  const srcN = {}; jobs.forEach(j => { const k = srcOf(j); srcN[k] = (srcN[k] || 0) + 1; });
+  const base = jobs.filter(j =>
+    (S.fStatus === "all" || (j.status || "new") === S.fStatus) &&
+    (S.fRegion === "all" || j.region === S.fRegion) &&
+    (S.fElig === "all" || j.eligibility?.status === S.fElig) &&
+    (S.fSrc === "all" || srcOf(j) === S.fSrc) &&
+    !(S.hideSkipped && S.fStatus === "all" && j.status === "skipped"));
+  const expN = base.filter(isExpired).length;           // expired jobs this checkbox actually hides
+  const expSkipped = S.hideSkipped && S.fStatus === "all" ? jobs.filter(j => isExpired(j) && j.status === "skipped").length : 0;
+  let list = sortJobs(base.filter(j => !(S.hideExpired && isExpired(j))));
+  const firstExp = S.sort === "deadline" && !S.hideExpired ? list.findIndex(isExpired) : -1;
+  const st = S.meta.status || {};
+  const excl = S.meta.excluded?.items || [];
+  const qs = Object.entries(S.questions);
+  const openQ = qs.filter(([, q]) => q.status !== "answered").length;
+  $("#app").innerHTML = `
+  <div class="summary">
+    ${["new", "reviewing", "approved", "applied", "skipped"].map(k => `<div class="stat"><b>${counts[k] || 0}</b><span>${ST[k]}</span></div>`).join("")}
+  </div>
+  ${st.note ? `<div class="notice info" style="margin-bottom:14px">${esc(st.note)}</div>` : ""}
+  <div class="controls panel">
+    <span class="muted" style="font-size:14px">排序</span>
+    <div class="seg" role="group" aria-label="排序">
+      ${[["match", "匹配度"], ["deadline", "截止日期"], ["posted", "最新发布"]].map(([k, l]) => `<button type="button" data-sort="${k}" aria-pressed="${S.sort === k}">${l}</button>`).join("")}
+    </div>
+    <label for="fStatus">状态 <select id="fStatus">${[["all", "全部"], ...Object.entries(ST)].map(([k, l]) => `<option value="${k}" ${S.fStatus === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+    <label for="fSrc">来源 <select id="fSrc">${[["all", "全部（" + jobs.length + "）"], ...Object.entries(SRC).map(([k, l]) => [k, l + "（" + (srcN[k] || 0) + "）"])].map(([k, l]) => `<option value="${k}" ${S.fSrc === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+    <label for="fRegion">地点 <select id="fRegion">${[["all", "全部"], ["gta", "GTA 内"], ["outside", "GTA 外"]].map(([k, l]) => `<option value="${k}" ${S.fRegion === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+    <label for="fElig">资格 <select id="fElig">${[["all", "全部"], ["ok", "符合"], ["warn", "有疑问"], ["no", "不符"]].map(([k, l]) => `<option value="${k}" ${S.fElig === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+    <label for="hideSk"><input type="checkbox" id="hideSk" ${S.hideSkipped ? "checked" : ""}> 隐藏已跳过</label>
+    <label for="hideEx"><input type="checkbox" id="hideEx" ${S.hideExpired ? "checked" : ""}> 隐藏已过期（${expN}）</label>
+  </div>
+  ${!S.hideExpired && (expN || expSkipped) ? `<p class="muted" style="margin:-6px 2px 12px;font-size:13px">正在显示 ${expN} 个已过期岗位（变灰${S.sort === "deadline" ? "，排在还没截止的岗位后面" : "，截止标签写着“已过”"}）。${expSkipped ? `另有 ${expSkipped} 个过期岗位你标了跳过，要看就取消“隐藏已跳过”。` : ""}</p>` : ""}
+  <div class="list">
+    ${list.length ? list.map((j, i) => `${i === firstExp ? `<div class="listsep">已过期（${expN}）</div>` : ""}
+    <article class="row panel${isExpired(j) ? " expired" : ""}">
+      ${dial(j.match?.total ?? 0, j.match?.capped)}
+      <div style="min-width:0">
+        <div class="co">${esc(j.company)}</div>
+        <h3><a href="#job-${esc(j.id)}" style="color:inherit;text-decoration:none">${esc(j.title)}</a></h3>
+        <div class="meta">
+          ${eligChip(j.eligibility || {})}
+          <span class="chip">${SRC[srcOf(j)]}</span>
+          <span class="chip ${j.region === "gta" ? "" : "warn"}">${esc(j.location)}</span>
+          ${driveShort(j) ? `<span class="chip">${esc(driveShort(j))}</span>` : ""}
+          <span class="chip">${esc(j.term)}</span>
+          ${j.pay && j.pay !== "未注明" ? `<span class="chip">${esc(j.pay)}</span>` : ""}
+          ${deadlineChip(j)}
+        </div>
+      </div>
+      <div class="act">
+        <span class="pill ${esc(j.status || "new")}">${ST[j.status || "new"]}</span>
+        <a class="btn primary small" href="#job-${esc(j.id)}">审核简历</a>
+        <a class="btn small" href="${esc(j.apply || j.url)}" target="_blank" rel="noopener">原帖 / 申请 ↗</a>
+      </div>
+    </article>`).join("") : `<div class="empty panel">没有符合筛选条件的岗位。</div>`}
+  </div>
+  <details class="box panel" data-box="q" ${(S.boxOpen.q ?? openQ > 0) ? "open" : ""}>
+    <summary>待你确认的信息 <span class="chip ${openQ ? "warn" : "ok"}">${openQ ? openQ + " 条未答" : "都答完了"}</span></summary>
+    <div class="qs">${qs.map(([id, q]) => `
+      <div class="q">
+        <div><span class="chip">${esc(q.topic)}</span> ${esc(q.q)}</div>
+        <div class="why">${esc(q.why)}</div>
+        <textarea id="qa-${esc(id)}" placeholder="直接写答案，保存后下次生成简历会用上">${esc(q.answer || "")}</textarea>
+        <div class="qa"><button class="btn small" data-saveq="${esc(id)}">保存回答</button>${q.status === "answered" ? `<span class="chip ok">已保存</span>` : ""}</div>
+      </div>`).join("")}</div>
+  </details>
+  <details class="box panel" data-box="ex" ${S.boxOpen.ex ? "open" : ""}>
+    <summary>已排除 ${excl.length} 个岗位 <span class="muted" style="font-weight:400;font-size:13px">（点开看原因）</span></summary>
+    <div class="excl">${excl.map(x => `<div><span><b>${esc(x.company)}</b> · ${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>` : esc(x.title)} <span class="muted">· ${esc(x.location)}</span></span><span class="muted">${esc(x.reason)}</span></div>`).join("")}</div>
+  </details>`;
+  $("#app").querySelectorAll("[data-sort]").forEach(b => b.onclick = () => { S.sort = b.dataset.sort; savePrefs(); render(); });
+  $("#fStatus").onchange = e => { S.fStatus = e.target.value; savePrefs(); render(); };
+  $("#fSrc").onchange = e => { S.fSrc = e.target.value; savePrefs(); render(); };
+  $("#fRegion").onchange = e => { S.fRegion = e.target.value; savePrefs(); render(); };
+  $("#fElig").onchange = e => { S.fElig = e.target.value; savePrefs(); render(); };
+  $("#hideSk").onchange = e => { S.hideSkipped = e.target.checked; savePrefs(); render(); };
+  $("#hideEx").onchange = e => { S.hideExpired = e.target.checked; savePrefs(); render(); };
+  $("#app").querySelectorAll("details[data-box]").forEach(d => d.querySelector("summary").addEventListener("click", () => setTimeout(() => { S.boxOpen = { ...S.boxOpen, [d.dataset.box]: d.open }; savePrefs(); }, 0)));
+  $("#app").querySelectorAll("[data-saveq]").forEach(b => b.onclick = async () => {
+    const id = b.dataset.saveq; const v = $("#qa-" + id).value.trim();
+    b.disabled = true;
+    try { await db.collection("questions").doc(id).update({ answer: v, status: v ? "answered" : "open", answeredAt: new Date().toISOString() }); toast("已保存"); }
+    catch (e) { toast("保存失败：" + (e.code || "请刷新后重试")); b.disabled = false; }
+  });
+}
+
+/* ---------- job view ---------- */
+function resumeHTML(r, diffSet) {
+  const tag = ids => S.showTags && ids?.length ? ` <span style="font:.78em var(--mono);color:#2557cf">[${ids.join(",")}]</span>` : "";
+  const dr = (ids, txt, path) => `data-r="${esc((ids || []).join(" "))}"${diffSet && diffSet.has(path) ? ` class="diffnew"` : ""}`;
+  const e = r.education || {};
+  return `<div class="pg">
+    <div class="nm">${esc(r.header?.name)}</div>
+    <div class="ct">${esc(r.header?.line)}</div>
+    ${r.summary ? `<div class="sm" ${dr([], r.summary, "sum")}>${esc(r.summary)}</div>` : ""}
+    <h5>Education</h5>
+    <div class="er"><span><b>${esc(e.school)}</b>, ${esc(e.place)}</span><span>${esc(e.dates)}</span></div>
+    <div>${esc(e.program)} &nbsp;|&nbsp; ${esc(e.gpa)}</div>
+    <div ${dr([], e.coursework, "edu")}>Relevant coursework: ${esc(e.coursework)}</div>
+    ${(r.highlights || []).length ? `<h5>Highlights</h5>
+    <ul>${r.highlights.map((h, i) => `<li ${dr(h.r, h.t, "h" + i)}>${esc(h.t)}${tag(h.r)}</li>`).join("")}</ul>` : ""}
+    <h5>Technical Skills</h5>
+    ${(r.skills || []).map((s, i) => `<div class="sk" ${dr(s.r, s.v, "s" + i)}><b>${esc(s.k)}:</b> ${esc(s.v)}${tag(s.r)}</div>`).join("")}
+    <h5>Projects &amp; Lab Experience</h5>
+    ${r.projectsNote ? `<div class="pn" ${dr([], r.projectsNote, "pn")}>${esc(r.projectsNote)}</div>` : ""}
+    ${(r.projects || []).map((p, i) => `<div class="pt"><b>${esc(p.title)}</b> <span>| ${esc(p.course)} | ${esc(p.tools)}</span></div>
+      <ul>${(p.bullets || []).map((b, k) => `<li ${dr(b.r, b.t, "p" + i + "." + k)}>${esc(b.t)}${tag(b.r)}</li>`).join("")}</ul>`).join("")}
+    <h5>Work Experience</h5>
+    ${(r.work || []).map((w, i) => `<div class="er"><span><b>${esc(w.org)}</b> | ${esc(w.role)}, ${esc(w.place)}</span><span>${esc(w.dates)}</span></div>
+      <ul>${(w.bullets || []).map((b, k) => `<li ${dr(b.r, b.t, "w" + i + "." + k)}>${esc(b.t)}</li>`).join("")}</ul>`).join("")}
+    <h5>Additional</h5>
+    <ul>${(r.additional || []).map((a, i) => `<li ${dr([], a, "a" + i)}>${esc(a)}</li>`).join("")}</ul>
+  </div>`;
+}
+function flatten(r) {
+  const m = new Map();
+  if (r.summary) m.set("sum", r.summary);
+  if (r.projectsNote) m.set("pn", r.projectsNote);
+  (r.highlights || []).forEach((h, i) => m.set("h" + i, h.t));
+  (r.skills || []).forEach((s, i) => m.set("s" + i, s.k + ": " + s.v));
+  (r.projects || []).forEach((p, i) => { m.set("pt" + i, p.title + " | " + p.course + " | " + p.tools); (p.bullets || []).forEach((b, k) => m.set("p" + i + "." + k, b.t)); });
+  m.set("edu", r.education?.coursework || "");
+  (r.work || []).forEach((w, i) => (w.bullets || []).forEach((b, k) => m.set("w" + i + "." + k, b.t)));
+  (r.additional || []).forEach((a, i) => m.set("a" + i, a));
+  return m;
+}
+function plainText(r) {
+  const e = r.education || {}, L = [];
+  L.push(r.header?.name, r.header?.line); if (r.summary) L.push(r.summary);
+  L.push("", "EDUCATION", `${e.school}, ${e.place}    ${e.dates}`, `${e.program} | ${e.gpa}`, "Relevant coursework: " + e.coursework);
+  if ((r.highlights || []).length) { L.push("", "HIGHLIGHTS"); r.highlights.forEach(h => L.push("- " + h.t)); }
+  L.push("", "TECHNICAL SKILLS"); (r.skills || []).forEach(s => L.push(s.k + ": " + s.v));
+  L.push("", "PROJECTS & LAB EXPERIENCE"); if (r.projectsNote) L.push(r.projectsNote); (r.projects || []).forEach(p => { L.push(p.title + " | " + p.course + " | " + p.tools); (p.bullets || []).forEach(b => L.push("- " + b.t)); });
+  L.push("", "WORK EXPERIENCE"); (r.work || []).forEach(w => { L.push(`${w.org} | ${w.role}, ${w.place}    ${w.dates}`); (w.bullets || []).forEach(b => L.push("- " + b.t)); });
+  L.push("", "ADDITIONAL"); (r.additional || []).forEach(a => L.push("- " + a));
+  return L.join("\n");
+}
+function validResume(r) {
+  return r && typeof r === "object" && r.header && Array.isArray(r.highlights) && Array.isArray(r.skills) && Array.isArray(r.projects)
+    && r.education && Array.isArray(r.work) && Array.isArray(r.additional)
+    && r.highlights.every(h => typeof h.t === "string") && r.projects.every(p => typeof p.title === "string" && Array.isArray(p.bullets));
+}
+
+function renderJob(id) {
+  const rd0 = S.resumes[id] || {};
+  if (pending?.id !== id && rd0.draft && rd0.draft.resume && rd0.current) {
+    const d = rd0.draft;
+    pending = { id, resume: d.resume, reply: d.reply, label: d.label, reqIds: d.reqIds || [], notDone: d.notDone || [], changes: diffList(rd0.current, d.resume), diffSet: diffKeys(rd0.current, d.resume), fromDraft: true };
+  }
+  const j = S.jobs[id], rd = S.resumes[id] || {}, cur = pending?.id === id ? pending.resume : rd.current;
+  const reqs = j.reqs || [];
+  const covered = new Set(); if (rd.current) { const all = []; (rd.current.highlights || []).forEach(h => all.push(...(h.r || []))); (rd.current.skills || []).forEach(s => all.push(...(s.r || []))); (rd.current.projects || []).forEach(p => p.bullets.forEach(b => all.push(...(b.r || [])))); all.forEach(x => covered.add(x)); }
+  const m = j.match || {};
+  const prevV = rd.history && rd.history[0] && rd.history[0].resume;
+  const diffSet = pending?.id === id ? pending.diffSet : (cur && prevV && rd.review !== "approved" ? diffKeys(prevV, cur) : null);
+  const hist = rd.history || [];
+  const reqsFor = id => (S.requests ? Object.entries(S.requests).filter(([, q]) => q.jobId === id) : []);
+  const pdfPath = j.pdf ? "文稿 › ChatGPT › coop job › " + j.pdf.split("/").join(" › ") : null;
+  const groups = ["duty", "req", "asset"].map(k => [k, reqs.filter(r => r.kind === k)]).filter(([, a]) => a.length);
+  $("#app").innerHTML = `
+  <p style="margin:0 0 10px"><a href="#board">← 返回岗位列表</a></p>
+  <div class="jobhead">
+    <div style="min-width:0"><div class="co">${esc(j.company)}</div><h2>${esc(j.title)}</h2></div>
+    <div class="right">
+      <label for="stSel" class="muted" style="font-size:14px">状态</label>
+      <select id="stSel" class="btn">${Object.entries(ST).map(([k, l]) => `<option value="${k}" ${(j.status || "new") === k ? "selected" : ""}>${l}</option>`).join("")}</select>
+      <a class="btn" href="${esc(j.url)}" target="_blank" rel="noopener">打开原帖 ↗</a>
+      <a class="btn primary" href="${esc(j.apply || j.url)}" target="_blank" rel="noopener">去申请 ↗</a>
+    </div>
+  </div>
+  <div class="jobtop">
+      <div class="panel">
+        <dl class="facts">
+          <dt>地点</dt><dd>${esc(j.location)}</dd>
+          <dt>通勤</dt><dd>${driveFull(j)}</dd>
+          <dt>任期</dt><dd>${esc(j.term)}</dd>
+          <dt>薪资</dt><dd>${esc(j.pay)}</dd>
+          <dt>发布</dt><dd>${esc(j.posted)}（${daysAgo(j.posted)}） · ${j.deadline ? "截止 " + esc(dlText(j)) + "（" + dlLeft(j) + "）" : "未注明截止，建议尽快投"}</dd>
+          <dt>来源</dt><dd>${esc(j.source)}</dd>
+        </dl>
+        <div style="padding:0 16px 14px;display:grid;gap:8px">
+          <div class="notice ${j.eligibility?.status === "ok" ? "ok" : j.eligibility?.status === "warn" ? "warn" : "bad"}">${eligChip(j.eligibility || {})}
+            <div class="edu" lang="en">
+              <div class="lab">Education / eligibility — exact wording from the posting</div>
+              ${j.edu?.quotes?.length ? j.edu.quotes.map(q => `<blockquote>“${esc(q)}”</blockquote>`).join("")
+                : j.edu?.missing ? `<blockquote lang="zh">${esc(j.edu.missing)}</blockquote>`
+                : j.edu ? `<blockquote>The posting does not state an education requirement.</blockquote>`
+                : `<blockquote lang="zh">还没摘原文，打开原帖 PDF 查看。</blockquote>`}
+              <details lang="zh"><summary>我的判断</summary>${esc(j.eligibility?.note)}</details>
+            </div></div>
+          ${(j.flags || []).length ? `<ul style="margin:0;padding-left:18px;font-size:14px;color:var(--warn)">${j.flags.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
+          ${pdfPath ? `<div class="muted" style="font-size:13px">原帖 PDF（已高亮，存在你电脑上）</div><div class="pathbox"><span id="pdfp">${esc(pdfPath)}</span><button class="btn small" id="cpPdf">复制</button></div>`
+            : `<div class="notice warn">原帖 PDF 没存成功（页面没加载出正文）。请用 Safari 打开原帖，文件 › 导出为 PDF，存到 Coop_Board/postings。</div>`}
+        </div>
+      </div>
+      <div style="display:grid;gap:14px;min-width:0">${anaPanel(id)}
+      <div class="panel score">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><b>匹配度 ${m.total ?? "—"}/100</b>${m.capped ? `<span class="chip bad">资格不符，原始 ${m.raw} 分封顶 40</span>` : ""}</div>
+        ${[["技能", m.skills, 50], ["方向", m.direction, 20], ["通勤", m.commute, 15], ["任期", m.term, 15]].map(([l, v, mx]) => `<div class="bar"><span>${l}</span><span class="t"><i style="width:${Math.round(100 * (v || 0) / mx)}%"></i></span><span class="n">${v ?? 0}/${mx}</span></div>`).join("")}
+      </div></div>
+  </div>
+  <div class="split">
+    <section class="col" aria-label="招聘要求">
+      <div class="panel">
+        <div class="legend" style="padding:12px 16px 0"><span class="chip ok">有证据</span><span class="chip warn">部分</span><span class="chip bad">缺口</span><span class="muted">鼠标移到一条要求上，右边简历里对应的句子会亮起来。</span></div>
+        <div class="reqs">${groups.map(([k, arr]) => `<h4>${KIND[k]}</h4>${arr.map(r => `
+          <div class="req ${esc(r.level)}" data-rid="${esc(r.id)}">
+            <span class="id">${esc(r.id)}</span>
+            <div><div class="tx">${esc(r.text)}</div><div class="nt">${esc(r.note)}</div>
+            <div class="cov ${covered.has(r.id) ? "yes" : "no"}">${covered.has(r.id) ? "✓ 简历已体现" : "· 简历未直接体现"} · ${LVL[r.level]}</div></div>
+          </div>`).join("")}`).join("")}</div>
+      </div>
+    </section>
+    <section class="col" aria-label="定制简历">
+      <div class="panel tool">
+        ${hist.length ? `<select id="verSel" aria-label="历史版本"><option value="">当前：${esc(rd.version_label || "最新")}</option>${hist.map((h, i) => `<option value="${i}">${esc(h.label)}</option>`).join("")}</select>` : `<span class="chip">${esc(rd.version_label || "v1")}</span>`}
+        ${rd.review === "approved" ? `<span class="chip ok">已审核通过</span>` : rd.review === "changes" ? `<span class="chip warn">需要修改</span>` : `<span class="chip">待审核</span>`}
+        <span class="sp"></span>
+        <label class="muted" style="font-size:13px;display:flex;gap:5px;align-items:center"><input type="checkbox" id="tagT" ${S.showTags ? "checked" : ""}> 显示要求编号</label>
+      </div>
+      <div class="sheetwrap"><div class="paper" id="paper">${cur ? resumeHTML(cur, diffSet) : `<div class="empty">这个岗位的简历还没生成。${sample ? "点下面的“按最新标准生成”。" : ""}</div>`}</div>
+        <div class="fit" id="fit"></div></div>
+      ${pending?.id === id ? `<div class="panel chat"><div class="reply">${String(pending.reply || "").split("\n").map(l => l.startsWith("没做到") ? `<div style="color:var(--bad)">${esc(l)}</div>` : `<div>${esc(l)}</div>`).join("")}</div>
+        ${pending.changes.length ? `<div class="diff">${pending.changes.map(c => `<div>${c.old ? `<del>${esc(c.old)}</del>` : ""}${c.new ? `<ins>${esc(c.new)}</ins>` : ""}</div>`).join("")}</div>` : `<div class="muted" style="font-size:13px">简历内容没有变化。</div>`}
+        <div class="row2"><button class="btn ok" id="adopt" ${pending.changes.length ? "" : "disabled"}>采用这版</button><button class="btn" id="discard">放弃</button><span class="muted" style="font-size:13px">上面绿色底的句子是新改的。采用后旧版本会留在历史里。</span></div></div>` : ""}
+      <div class="panel tool">
+        <button class="btn ok" id="approve">审核通过</button>
+        <button class="btn" id="needs">需要修改</button>
+        <span class="sp"></span>
+        ${sample ? `<button class="btn primary" id="regen" ${isBusy(id, "resume") ? "disabled" : ""}>${isBusy(id, "resume") ? "正在生成…" : cur ? "按最新标准再生成" : "按最新标准生成"}</button>` : ""}
+        <button class="btn" id="copyTxt">复制纯文本</button>
+        ${dl ? `<button class="btn" id="dlPdf">下载 PDF</button><button class="btn" id="dlDocx">下载 Word</button>` : `<span class="muted" style="font-size:13px">这个视图不能下载文件，可先复制纯文本</span>`}
+      </div>
+      ${errLine(id, "resume")}
+      ${modelNote ? `<div class="panel tool" role="status" style="color:var(--bad);font-size:13.5px">${esc(modelNote)}</div>` : ""}
+      ${letterPanel(id)}
+      <div class="panel chat">
+        <b>提要求改这份简历</b>
+        ${sample ? `<textarea id="ask" placeholder="写一条要求点“马上改”，约半分钟出预览，可以接着再说下一条，像对话一样；改满意了点“采用这版”。也可以先“加入待改”攒几条，最后一次生成。例如：GPA 不要加粗；兼职各压到一行；PLC 项目放第一个。"></textarea>
+        <div class="row2"><button class="btn primary" id="askNow">马上改</button><button class="btn" id="send">加入待改</button>
+        <button class="btn primary" id="regen2" ${isBusy(id, "resume") ? "disabled" : ""}>${isBusy(id, "resume") ? "正在生成…" : queuedFor(id).length ? `按 ${queuedFor(id).length} 条要求生成` : "按最新标准再生成"}</button><button class="btn" id="stop" ${isBusy(id, "resume") ? "" : "hidden"}>停止</button>
+        <label for="toCC"><input type="checkbox" id="toCC"> 交给 其他 AI（需要翻原始实验报告、或改网页排版的要求；要等下次对话才处理）</label></div>
+        <div class="muted" style="font-size:12.5px">生成时会一起带上：简历标准、你的档案事实、这个岗位的要求、下面所有“待改”的要求，以及你以前提过的通用要求。第一次生成的简历直接保存；以后再生成的先存成草稿，点“采用这版”才替换。生成时离开这个页面也没关系，结果会自动存好。做不到的要求会用红字说明原因。</div>
+        <div id="chatOut"></div>` : `<textarea id="ask" placeholder="写下修改要求，会存给 其他 AI 处理。"></textarea><div class="row2"><button class="btn primary" id="sendCC">留给 其他 AI</button><span class="muted" style="font-size:12.5px">这个视图不能直接调用 Claude，要求会排队，每周五自动处理或在对话里让 Claude 处理。</span></div>`}
+        ${reqsFor(id).length ? `<div class="diff">${reqsFor(id).sort((a, b) => String(b[1].createdAt).localeCompare(String(a[1].createdAt))).map(([rid, q]) => `<div><span class="chip ${q.status === "done" ? "ok" : q.status === "failed" ? "bad" : "warn"}">${q.status === "done" ? "已处理" : q.status === "failed" ? "没做到" : q.status === "queued" ? "待改" : "等 其他 AI"}</span> ${esc(q.text)}${q.reply ? `<span class="muted" ${q.status === "failed" ? 'style="color:var(--bad)"' : ""}>→ ${esc(q.reply)}</span>` : ""}${q.status === "queued" ? ` <button class="btn small" data-delq="${esc(rid)}">删掉</button>` : ""}</div>`).join("")}</div>` : ""}
+      </div>
+    </section>
+  </div>`;
+  bindJob(id, cur);
+}
+
+function bindJob(id, cur) {
+  const app = $("#app");
+  const lightR = (ids, on) => app.querySelectorAll(".pg [data-r]").forEach(el => { const has = el.dataset.r.split(" ").some(x => ids.includes(x)); el.classList.toggle("lit", on && has); });
+  const lightL = (ids, on) => app.querySelectorAll(".req").forEach(el => el.classList.toggle("lit", on && ids.includes(el.dataset.rid)));
+  app.querySelectorAll(".req").forEach(el => { el.onmouseenter = () => lightR([el.dataset.rid], true); el.onmouseleave = () => lightR([], false); });
+  app.querySelectorAll(".pg [data-r]").forEach(el => { const ids = el.dataset.r.split(" ").filter(Boolean); el.onmouseenter = () => lightL(ids, true); el.onmouseleave = () => lightL([], false); });
+  const pg = $(".pg"); if (pg) requestAnimationFrame(() => { const p = $("#paper"); const pageH = p.clientWidth * 11 / 8.5; const last = pg.lastElementChild; const natural = last.getBoundingClientRect().bottom - pg.getBoundingClientRect().top + parseFloat(getComputedStyle(pg).paddingBottom); const over = natural > pageH + 2; $("#fit").innerHTML = over ? `<span style="color:var(--bad)">预览超过一页；下载 PDF 时会自动缩小字号排进一页。</span>` : `<span class="muted">一页内 ✓</span>`; });
+  $("#tagT").onchange = e => { S.showTags = e.target.checked; savePrefs(); render(); };
+  $("#stSel").onchange = async e => { try { await db.collection("jobs").doc(id).update({ status: e.target.value, statusAt: new Date().toISOString() }); toast("状态已更新"); } catch (er) { toast("没保存上：" + (er.code || "")); } };
+  const vs = $("#verSel"); if (vs) vs.onchange = e => {
+    if (e.target.value === "") { pending = null; render(); return; }
+    const h = S.resumes[id].history[+e.target.value];
+    pending = { id, resume: h.resume, reply: `这是历史版本「${h.label}」。点“采用这版”恢复它。`, changes: diffList(S.resumes[id].current, h.resume), diffSet: diffKeys(S.resumes[id].current, h.resume) };
+    render();
+  };
+  $("#cpPdf") && ($("#cpPdf").onclick = () => copyText($("#pdfp").textContent, $("#pdfp")));
+  $("#approve").onclick = async () => { try { await db.collection("resumes").doc(id).update({ review: "approved", reviewedAt: new Date().toISOString() }); await db.collection("jobs").doc(id).update({ status: "approved" }); toast("已通过。下载 PDF 后自己去申请页上传。"); } catch (e) { toast("没保存上：" + (e.code || "")); } };
+  $("#needs").onclick = async () => { try { await db.collection("resumes").doc(id).update({ review: "changes" }); await db.collection("jobs").doc(id).update({ status: "reviewing" }); $("#ask")?.focus(); toast("已标记需要修改，在下面写要求"); } catch (e) { toast("没保存上：" + (e.code || "")); } };
+  $("#copyTxt").onclick = () => copyText(plainText(cur), $("#paper"));
+  const fname = ext => `${me(2)}_Resume_${(S.jobs[id].company || "").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_|_$/g, "")}.${ext}`;
+  $("#dlPdf") && ($("#dlPdf").onclick = async () => { try { const blob = buildPdf(cur); await dl.save({ filename: fname("pdf"), data: blob }); toast("已保存 PDF"); } catch (e) { toast(e.code === "declined" ? "已取消" : "PDF 没保存上：" + (e.code || e.message || "")); } });
+  $("#dlDocx") && ($("#dlDocx").onclick = async () => { try { const blob = await buildDocx(cur); await dl.save({ filename: fname("docx"), data: blob }); toast("已保存 Word"); } catch (e) { toast(e.code === "declined" ? "已取消" : "Word 没保存上：" + (e.code || e.message || "")); } });
+  const LT = (S.letters || {})[id];
+  if (LT) {
+    const lname = ext => fname(ext).replace("_Resume_", "_Cover_Letter_");
+    $("#cpLtr").onclick = () => copyText(letterText(LT), $("#ltrPaper"));
+    $("#dlLtrPdf") && ($("#dlLtrPdf").onclick = async () => { try { await dl.save({ filename: lname("pdf"), data: buildLetterPdf(LT) }); toast("已保存 cover letter PDF"); } catch (e) { toast(e.code === "declined" ? "已取消" : "PDF 没保存上：" + (e.code || e.message || "")); } });
+    $("#dlLtrDocx") && ($("#dlLtrDocx").onclick = async () => { try { await dl.save({ filename: lname("docx"), data: await buildLetterDocx(LT) }); toast("已保存 cover letter Word"); } catch (e) { toast(e.code === "declined" ? "已取消" : "Word 没保存上：" + (e.code || e.message || "")); } });
+  }
+  $("#regen") && ($("#regen").onclick = () => { if (!isBusy(id, "resume")) regen(id); });
+  $("#genAna") && ($("#genAna").onclick = () => { if (!isBusy(id, "analysis")) genAnalysis(id); });
+  $("#genLtr") && ($("#genLtr").onclick = () => { if (!isBusy(id, "letter")) genLetter(id); });
+  $("#adopt") && ($("#adopt").onclick = async () => {
+    const rd = S.resumes[id]; const day = new Date().toLocaleDateString("zh-CN"), why = pending.label || "网页修改";
+    try {
+      if (!rd || !rd.current) await db.collection("resumes").doc(id).set({ jobId: id, current: pending.resume, history: [], version_label: `v1 ${day} ${why}`, review: "pending" });
+      else {
+        const n = (rd.history?.length || 0) + 2;
+        const hist = [{ label: rd.version_label || "v1", at: new Date().toISOString(), resume: rd.current }, ...(rd.history || [])].slice(0, 10);
+        await db.collection("resumes").doc(id).update({ current: pending.resume, history: hist, version_label: `v${n} ${day} ${why}`, review: "pending", draft: null });
+      }
+      await markReqs(pending.reqIds || [], pending.notDone || []);
+      pending = null; toast("已采用，新版本已保存");
+    } catch (e) { toast("没保存上：" + (e.code || "")); }
+  });
+  $("#discard") && ($("#discard").onclick = async () => { const fromDraft = pending && pending.fromDraft; pending = null; if (fromDraft) { try { await db.collection("resumes").doc(id).update({ draft: null }); } catch (e) {} } render(); });
+  $("#send") && ($("#send").onclick = () => queueReq(id));
+  $("#askNow") && ($("#askNow").onclick = () => ask(id));
+  $("#ask") && ($("#ask").onkeydown = e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); ask(id); } });
+  $("#regen2") && ($("#regen2").onclick = () => { if (!isBusy(id, "resume")) regen(id); });
+  app.querySelectorAll("[data-delq]").forEach(b => b.onclick = async () => { try { await db.collection("requests").doc(b.dataset.delq).delete(); } catch (e) { toast("没删掉：" + (e.code || "")); } });
+  $("#stop") && ($("#stop").onclick = () => chatCtl?.abort());
+  $("#sendCC") && ($("#sendCC").onclick = () => queueCC(id));
+}
+function diffKeys(a, b) { const A = flatten(a), B = flatten(b), s = new Set(); B.forEach((v, k) => { if (A.get(k) !== v) s.add(k); }); return s; }
+function diffList(a, b) {
+  const A = flatten(a), B = flatten(b), out = [];
+  new Set([...A.keys(), ...B.keys()]).forEach(k => { if (A.get(k) !== B.get(k)) out.push({ old: A.get(k) || "", new: B.get(k) || "" }); });
+  return out;
+}
+async function queueCC(id) {
+  const t = $("#ask").value.trim(); if (!t) { toast("先写要求"); return; }
+  try { await db.collection("requests").add({ jobId: id, text: t, createdAt: new Date().toISOString(), status: "open" }); $("#ask").value = ""; toast("已留给 其他 AI"); }
+  catch (e) { toast("没保存上：" + (e.code || "")); }
+}
+const WANT_MODEL = "claude-opus-5-5";
+let modelNote = "";
+async function askOpus(prompt, signal) {
+  const r = await sample(prompt, { signal, cache: false, model: WANT_MODEL, modelTier: "complex", effort: "high" });
+  const tierName = { quick: "快速档", default: "默认档", complex: "最强档" }[r.modelTierApplied] || String(r.modelTierApplied || "未知档");
+  modelNote = r.modelApplied === WANT_MODEL ? "" : `这次没有用上 ${WANT_MODEL}（思考强度 high），改由平台的「${tierName}」模型回答${r.modelApplied ? "（" + r.modelApplied + "）" : ""}。平台没有告诉网页具体原因，可能是：你的账号当前不能选这个模型、模型暂时不可用或过载、或模型编号已停用。`;
+  const t = String(r.text || ""), a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if (a < 0 || b <= a) throw { code: "invalid_json" };
+  try { return JSON.parse(t.slice(a, b + 1)); } catch (e) { throw { code: "invalid_json" }; }
+}
+function pastRequests() {
+  return Object.values(S.requests || {}).filter(q => q.text && q.status !== "queued").sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))).slice(-20).map(q => "- " + q.text).join("\n") || "（还没有）";
+}
+function jobBrief(j) {
+  return (j.reqs || []).map(r => `${r.id} [${r.kind}/${r.level}] ${r.text} ｜原帖用词: ${r.phrase || ""} ｜依据或缺口: ${r.note || ""}`).join("\n");
+}
+const ANA_SECTIONS = [["role", "这个岗位怎么样"], ["company", "公司介绍"], ["fit", "你的胜算"], ["risks", "风险和要注意的"], ["learn", "能学到什么、对以后有什么用"], ["interview", "面试可能问"], ["askThem", "可以问对方的问题"], ["unsure", "不确定、需要你自己核实的"]];
+function anaPanel(id) {
+  const A = (S.analysis || {})[id];
+  const head = `<div class="panel tool"><b>岗位分析</b>${A ? `<span class="chip">${esc(A.version_label || "")}</span>` : `<span class="muted" style="font-size:13px">还没生成。点生成后复制提示词给任意 AI。</span>`}<span class="sp"></span>${sample ? `<button class="btn" id="genAna" ${isBusy(id, "analysis") ? "disabled" : ""}>${isBusy(id, "analysis") ? "正在分析…" : A ? "重新生成" : "生成岗位分析"}</button>` : ""}</div>${errLine(id, "analysis")}`;
+  if (!A) return head;
+  const list = k => (A[k] || []).length ? `<div><h4>${esc(ANA_SECTIONS.find(x => x[0] === k)[1])}</h4><ul>${A[k].map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>` : "";
+  return head + `<div class="panel ana">
+    <div class="verdict">${esc(A.verdict || "")}</div>
+    ${A.modelNote ? `<div style="color:var(--bad);font-size:13px">${esc(A.modelNote)}</div>` : ""}
+    ${ANA_SECTIONS.map(([k]) => list(k)).join("")}
+    ${(A.sources || []).length ? `<div><h4>来源</h4><ul>${A.sources.map(x => `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title || x.url)}</a></li>`).join("")}</ul></div>` : ""}
+    <div class="muted" style="font-size:12.5px">${A.web ? "加岗位时联网查过公司资料，来源见上；近况仍以公司官网为准。" : "这份是网页里生成的，公司介绍只靠模型已有的知识，没有联网核实。"}</div></div>`;
+}
+async function genAnalysis(id) {
+  const j = S.jobs[id];
+  const b = $("#genAna"); if (b) { b.disabled = true; b.textContent = "正在分析…（约 1 分钟）"; }
+  setBusy(id, "analysis", true); setErr(id, "analysis", "");
+  const facts = (() => { try { const F = JSON.parse(S.meta.facts?.json || "{}"); return JSON.stringify({ education: F.education, skills: F.skills, projects: Object.fromEntries(Object.entries(F.projects || {}).map(([k, p]) => [k, p.title + " | " + p.course])), never_claim: F.never_claim, lab_role: F.lab_role }); } catch (e) { return "{}"; } })();
+  const prompt = `你在帮 ${me()} 判断要不要投一个 co-op 岗位、怎么准备。${((S.meta&&S.meta.profile)||{}).bio||""}
+用中文写，具体、直说，不说套话，不夸。只根据下面的岗位资料和你对这家公司的已有了解；不确定的放进 unsure，不要编数字、员工数、薪资或新闻。
+只回复一个 JSON 对象：
+{"verdict":"一句话结论：值不值得投、优先级高中低、为什么",
+"role":["这个岗位日常大概做什么、偏动手还是偏文书、团队和班次，3–5 条"],
+"company":["公司做什么产品或业务、所属行业、在 GTA 的这个厂或办公室做什么、大概规模，3–5 条"],
+"fit":["他的哪些经历最对得上、哪些是缺口、和本科工程生比有没有劣势，3–5 条"],
+"risks":["资格、安全审查、学习许可、轮班、通勤、岗位描述里的模糊点等，2–4 条"],
+"learn":["做完这份 co-op 能学到什么、对毕业后找哪类工作有帮助，2–3 条"],
+"interview":["这个岗位最可能问他的 4–5 个具体问题（英文原句）"],
+"askThem":["他面试结尾可以问的 2–3 个问题（英文原句）"],
+"unsure":["需要他自己去官网或原帖核实的点，1–3 条"]}
+
+岗位资料：
+${JSON.stringify({ company: j.company, title: j.title, location: j.location, commute: j.commute, term: j.term, pay: j.pay, deadline: j.deadline, source: j.source, eligibility: j.eligibility, edu_quotes: j.edu?.quotes, flags: j.flags, match: j.match, requirements: (j.reqs || []).map(r => ({ kind: r.kind, level: r.level, text: r.text, posting_words: r.phrase, evidence_or_gap: r.note })) })}
+
+他的档案摘要：
+${facts}`;
+  try {
+    const res = await askOpus(prompt);
+    if (!res || !res.verdict) throw { code: "shape" };
+    const doc = { jobId: id, verdict: String(res.verdict) };
+    ANA_SECTIONS.forEach(([k]) => { doc[k] = Array.isArray(res[k]) ? res[k].map(String).slice(0, 6) : []; });
+    doc.modelNote = modelNote || "";
+    doc.version_label = new Date().toLocaleDateString("zh-CN") + " 生成";
+    await db.collection("analysis").doc(id).set(doc);
+    toast(jobName(id) + " 的岗位分析已生成");
+  } catch (e) {
+    setErr(id, "analysis", errText(e)); toast(jobName(id) + " 的岗位分析没生成：" + errText(e));
+  } finally { setBusy(id, "analysis", false); render(); }
+}
+function queuedFor(id) { return Object.entries(S.requests || {}).filter(([, q]) => q.jobId === id && q.status === "queued").sort((a, b) => String(a[1].createdAt).localeCompare(String(b[1].createdAt))); }
+async function queueReq(id) {
+  const t = $("#ask").value.trim(); if (!t) { toast("先写要求"); return; }
+  if ($("#toCC").checked) return queueCC(id);
+  try { await db.collection("requests").add({ jobId: id, text: t, createdAt: new Date().toISOString(), status: "queued", via: "page" }); $("#ask").value = ""; toast("已加入待改，可以继续加，最后点“按要求生成”"); }
+  catch (e) { toast("没保存上：" + (e.code || "")); }
+}
+async function regen(id) {
+  const j = S.jobs[id], cur = S.resumes[id] && S.resumes[id].current, queued = queuedFor(id);
+  setBusy(id, "resume", true); setErr(id, "resume", "");
+  ["#regen", "#regen2"].forEach(sel => { const b = $(sel); if (b) { b.disabled = true; b.textContent = "正在生成…"; } });
+  const st0 = $("#stop"); if (st0) st0.hidden = false;
+  const prompt = `你在为 ${me(1)} 写一份投 co-op 的英文简历，岗位：${j.company} — ${j.title}（${j.term || ""}）。
+严格按 STANDARD 写；这是重新生成，不是小修：按这个岗位选项目、排顺序、改写每条 bullet，不要照抄 FACTS 里的现成句子，也不要照抄 CURRENT_RESUME。
+硬性规则：
+1. 只能使用 FACTS 里的事实；never_claim 里的一律不写；不编造数字、证书、经历或结果。level 是 gap 的要求不要写进简历。
+2. USER_PAST_REQUESTS 是用户以前提过的修改要求，其中通用的（不是只针对某一个岗位的）也要遵守。
+2b. THIS_RESUME_REQUESTS 是用户这次对这份简历提的要求，必须逐条落实，优先级高于 STANDARD 和 FACTS 里的写法（但不能违反第 1 条）。做不到的有两种：需要 FACTS 里没有的信息；或者属于网页排版（字体粗细、字号、颜色、栏目标题的样式），简历 JSON 控制不了。做不到的逐条说明原因。
+3. JSON 结构：{header{name,line}, summary, projectsNote, education{school,place,program,dates,gpa,coursework}, highlights:[], skills[{k,v,r}], projects[{key,title,course,tools,bullets[{t,r}]}], work[{org,role,place,dates,bullets[{t,r}]}], additional[string]}。header、education 的 school/place/program/dates/gpa、work 的 org/role/place/dates 照 FACTS 原样。r 是该条回应的要求编号数组。
+只回复一个 JSON 对象：{"reply":"用中文三四句说明：这个岗位最看重什么、你选了哪些项目、哪些岗位要求没法回应","done":["做到了的要求编号"],"notDone":[{"id":"没做到的要求编号","why":"中文一句原因"}],"resume":{...}}
+
+STANDARD:
+${S.meta.standard?.text || "（没有）"}
+
+FACTS:
+${S.meta.facts?.json || "{}"}
+
+REQUIREMENTS:
+${jobBrief(j)}
+
+THIS_RESUME_REQUESTS:
+${queued.length ? queued.map(([rid, q]) => rid + ": " + q.text).join("\n") : "（没有）"}
+
+USER_PAST_REQUESTS:
+${pastRequests()}
+
+CURRENT_RESUME（仅供了解现状，不要照抄）:
+${cur ? JSON.stringify(cur) : "（还没有）"}`;
+  chatCtl = new AbortController();
+  try {
+    const res = await askOpus(prompt, chatCtl.signal);
+    if (!res || !validResume(res.resume)) throw { code: "shape" };
+    const nd = Array.isArray(res.notDone) ? res.notDone.filter(x => x && x.id) : [];
+    const ndText = nd.map(x => { const q = (S.requests || {})[x.id]; return "没做到：" + (q ? q.text : x.id) + " —— " + (x.why || ""); }).join("\n");
+    const meta = { reply: String(res.reply || "") + (ndText ? "\n" + ndText : ""), label: queued.length ? `按 ${queued.length} 条要求生成` : (cur ? "按标准再生成" : "按标准生成"), reqIds: queued.map(([rid]) => rid), notDone: nd };
+    const how = await saveGenerated(id, res, meta);
+    if (how === "draft") { pending = null; toast(jobName(id) + " 的新简历生成好了，打开岗位点“采用这版”替换"); }
+    else toast(jobName(id) + " 的简历生成好了，已保存");
+  } catch (e) {
+    setErr(id, "resume", errText(e)); toast(jobName(id) + " 的简历没生成：" + errText(e));
+  } finally { setBusy(id, "resume", false); render(); }
+}
+async function genLetter(id) {
+  const j = S.jobs[id], old = (S.letters || {})[id], rd = S.resumes[id];
+  const btn = $("#genLtr"); if (btn) { btn.disabled = true; btn.textContent = "正在生成…（约 1 分钟）"; }
+  setBusy(id, "letter", true); setErr(id, "letter", "");
+  const prompt = `你在为 ${me(1)} 写一封投 co-op 的英文 cover letter，岗位：${j.company} — ${j.title}（${j.term || ""}）。
+按 STANDARD 第 6 节写。只能用 FACTS 里的事实，never_claim 里的不写，不写工作许可。USER_PAST_REQUESTS 里通用的要求也要遵守。
+只回复一个 JSON 对象：{"subject":"Re: 职位名和学期","greeting":"Dear ...,","paras":["四段正文，纯文本；需要加粗的词用 ** 包住"]}
+
+STANDARD:
+${S.meta.standard?.text || "（没有）"}
+
+FACTS:
+${S.meta.facts?.json || "{}"}
+
+REQUIREMENTS:
+${jobBrief(j)}
+
+提醒和原帖的特殊要求:
+${(j.flags || []).join("\n")}
+
+USER_PAST_REQUESTS:
+${pastRequests()}
+
+称呼一律用 "Dear Hiring Manager,"，除非原帖给了具体的人名（那就用全名或 Dr./头衔加姓，不从名字猜性别）。不要把部门名或公司名写进称呼。`;
+  try {
+    const res = await askOpus(prompt);
+    if (!res || !Array.isArray(res.paras) || !res.paras.length) throw { code: "shape" };
+    const header = (rd && rd.current && rd.current.header) || (old && old.header) || JSON.parse(S.meta.facts?.json || "{}").header || {};
+    const n = old ? (parseInt(String(old.version_label || "v1").slice(1)) || 1) + 1 : 1;
+    const doc = { jobId: id, header, date: new Date().toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" }), to: old && old.to ? old.to : ["Hiring Manager", j.company],
+      greeting: String(res.greeting || "Dear Hiring Manager,"), subject: String(res.subject || "Re: " + j.title), paras: res.paras.map(String), closing: "Sincerely,",
+      why: old && old.why ? old.why : "你自己点的生成", version_label: `v${n} ${new Date().toLocaleDateString("zh-CN")} 网页生成` };
+    if (old) doc.prev = { paras: old.paras, subject: old.subject, greeting: old.greeting, version_label: old.version_label };
+    await db.collection("letters").doc(id).set(doc);
+    toast(jobName(id) + " 的 cover letter 已生成，读一遍再用");
+  } catch (e) {
+    setErr(id, "letter", errText(e)); toast(jobName(id) + " 的 cover letter 没生成：" + errText(e));
+  } finally { setBusy(id, "letter", false); render(); }
+}
+async function ask(id) {
+  const t = $("#ask").value.trim(); if (!t) { toast("先写要求"); return; }
+  if ($("#toCC").checked) return queueCC(id);
+  if (!S.resumes[id] || !S.resumes[id].current) { toast("还没有简历，先点“按最新标准生成”"); return; }
+  const j = S.jobs[id], cur = pending?.id === id ? pending.resume : S.resumes[id].current, base = S.resumes[id].current;
+  const convo = Object.values(S.requests || {}).filter(q => q.jobId === id && q.via === "page-live").sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))).slice(-6).map(q => "你：" + q.text + "\nClaude：" + (q.reply || "")).join("\n") || "（这是第一句）";
+  const facts = S.meta.facts?.json || "{}";
+  const reqs = (j.reqs || []).map(r => `${r.id} [${r.kind}/${r.level}] ${r.text}`).join("\n");
+  const prompt = `你在帮 ${me(1)} 修改一份投 co-op 的英文简历（岗位：${j.company} — ${j.title}）。
+规则：
+1. 只能使用 FACTS 里的事实。never_claim 列表里的内容一律不写；不编造数字、证书、工作经历或成果。
+2. 风格遵守 FACTS.style：结构清晰、有重点；不把万用表、钳形表、剥线钳等基础工具当技能；安装经历按 EET-115 → EET-125 → EET-216 课程顺序；简历上不写工作许可。
+3. 保持一页：总字数不要明显增加。
+4. 保持 JSON 结构一致（原简历里有 summary、projectsNote 字段就保留；highlights 可以是空数组，表示不显示这一栏）：header{name,line}, summary?, projectsNote?, highlights[{t,r}], skills[{k,v,r}], projects[{key,title,course,tools,bullets[{t,r}]}], education{school,place,program,dates,gpa,coursework}, work[{org,role,place,dates,bullets[{t,r}]}], additional[string]。r 是该条对应的招聘要求编号（见 REQUIREMENTS）。
+5. 如果用户的要求需要 FACTS 里没有的信息，不要改简历：resume 原样返回，在 reply 里用中文问用户要这条信息。
+6. 同时遵守 STANDARD；它和上面有冲突时以 STANDARD 为准，用户这次的要求优先于两者。
+7. 字体粗细、字号、颜色、栏目标题样式这类排版由网页代码控制，简历 JSON 改不了：遇到这类要求，resume 原样返回，reply 里明说“这是排版，需要勾选交给 其他 AI 改网页代码”。
+8. CONVERSATION 是这份简历之前几轮的对话，用来理解“刚才那条”“再短一点”这类话。
+只回复一个 JSON 对象：{"reply":"用中文简短说明改了什么或缺什么信息","resume":{...}}
+
+STANDARD:
+${S.meta.standard?.text || "（没有）"}
+
+FACTS:
+${facts}
+
+REQUIREMENTS:
+${reqs}
+
+CONVERSATION:
+${convo}
+
+CURRENT_RESUME:
+${JSON.stringify(cur)}
+
+USER_REQUEST:
+${t}`;
+  const out = $("#chatOut"); if (out) out.innerHTML = `<div class="reply">正在改…（通常 20–60 秒）</div>`;
+  ["#send", "#askNow"].forEach(x => { const b = $(x); if (b) b.disabled = true; }); const st1 = $("#stop"); if (st1) st1.hidden = false;
+  setBusy(id, "resume", true); setErr(id, "resume", "");
+  chatCtl = new AbortController();
+  const here = () => route().view === "job" && route().id === id;
+  try {
+    const res = await askOpus(prompt, chatCtl.signal);
+    if (!res || !validResume(res.resume)) throw { code: "shape", message: "返回的简历格式不对" };
+    db.collection("requests").add({ jobId: id, text: t, createdAt: new Date().toISOString(), status: "done", via: "page-live", reply: String(res.reply || "") }).catch(() => {});
+    await saveGenerated(id, res, { reply: String(res.reply || "") + (modelNote ? "\n没做到：" + modelNote : ""), label: "网页对话修改" });
+    pending = null;
+    if (here()) { const a = $("#ask"); if (a && a.value.trim() === t) a.value = ""; }
+    else toast(jobName(id) + " 的修改好了，打开岗位点“采用这版”");
+  } catch (e) {
+    setErr(id, "resume", errText(e));
+    const o = here() && $("#chatOut"); if (o) o.innerHTML = `<div class="reply">${esc(errText(e))}</div>`; else toast(jobName(id) + " 的修改没成功：" + errText(e));
+  } finally {
+    setBusy(id, "resume", false);
+    const keep = here() && $("#ask") ? $("#ask").value : null;
+    render();
+    if (keep !== null && $("#ask")) { $("#ask").value = keep; requestAnimationFrame(() => { const a = $("#ask"); if (a) a.focus(); }); }
+  }
+}
+
+/* ---------- Cover letter ---------- */
+const ltrSegs = t => String(t || "").split(/\*\*(.+?)\*\*/).map((x, i) => ({ t: x, b: i % 2 === 1 })).filter(x => x.t);
+const ltrBlocks = L => [[L.date], L.to || [], [L.subject], [L.greeting], ...(L.paras || []).map(p => [p]), [L.closing, (L.header || {}).name]];
+function letterPanel(id) {
+  const L = (S.letters || {})[id];
+  const lb = isBusy(id, "letter");
+  if (!L) return `<div class="panel tool"><b>Cover letter</b>${needsLetter(S.jobs[id]) ? `<span class="chip warn">原帖要求</span><span class="muted" style="font-size:13px">还没生成，投之前点右边生成。</span>` : `<span class="muted" style="font-size:13px">原帖没写必须附，需要的话也可以生成。</span>`}<span class="sp"></span>${sample ? `<button class="btn" id="genLtr" ${lb ? "disabled" : ""}>${lb ? "正在生成…（约 1 分钟）" : "生成 cover letter"}</button>` : ""}</div>${errLine(id, "letter")}`;
+  const para = t => ltrSegs(t).map(x => x.b ? `<b>${esc(x.t)}</b>` : esc(x.t)).join("");
+  return `<div class="panel tool"><b>Cover letter</b>${needsLetter(S.jobs[id]) ? `<span class="chip warn">原帖要求</span>` : ""}<span class="muted" style="font-size:13px">${esc(L.why || "")}</span><span class="sp"></span><span class="chip">${esc(L.version_label || "v1")}</span></div>
+      <div class="sheetwrap"><div class="paper" id="ltrPaper"><div class="ltr">
+        <div class="lh"><b>${esc((L.header || {}).name)}</b><span>${esc((L.header || {}).line)}</span></div>
+        <p>${esc(L.date)}</p><p>${(L.to || []).map(esc).join("<br>")}</p><p><b>${esc(L.subject)}</b></p><p>${esc(L.greeting)}</p>
+        ${(L.paras || []).map(p => `<p>${para(p)}</p>`).join("")}
+        <p>${esc(L.closing)}<br><br>${esc((L.header || {}).name)}</p></div></div></div>
+      ${errLine(id, "letter")}<div class="panel tool"><span class="muted" style="font-size:13px">投之前自己读一遍，确认每句都是你能在面试里讲清楚的。</span><span class="sp"></span>
+        ${sample ? `<button class="btn" id="genLtr" ${lb ? "disabled" : ""}>${lb ? "正在生成…" : "按最新标准再生成"}</button>` : ""}
+        <button class="btn" id="cpLtr">复制 cover letter</button>
+        ${dl ? `<button class="btn" id="dlLtrPdf">下载 PDF</button><button class="btn" id="dlLtrDocx">下载 Word</button>` : ""}</div>`;
+}
+function letterText(L) {
+  const h = L.header || {};
+  return [h.name, h.line, "", ...ltrBlocks(L).flatMap((b, i) => [...b.map(t => String(t || "").replace(/\*\*/g, "")), ...(i === ltrBlocks(L).length - 1 ? [] : [""])])].join("\n");
+}
+function buildLetterPdf(L) {
+  const { jsPDF } = window.jspdf;
+  const W = 612, M = 68, CW = W - 2 * M, fs = 11, lh = fs * 1.42, h = L.header || {};
+  const clean = s => String(s || "").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/[^\x09\x0A\x0D\x20-\x7E -ÿ–—•]/g, "");
+  const doc = new jsPDF({ unit: "pt", format: "letter" });
+  let y = M;
+  const font = (b, size) => { doc.setFont("helvetica", b ? "bold" : "normal"); doc.setFontSize(size || fs); };
+  const wrap = segs => {
+    const words = []; segs.forEach(sg => clean(sg.t).split(/(\s+)/).forEach(w => { if (w) words.push({ w, b: sg.b }); }));
+    let line = [], lw = 0; const lines = [line];
+    words.forEach(it => { font(it.b); const ww = doc.getTextWidth(it.w); const sp = /^\s+$/.test(it.w);
+      if (sp) { if (line.length) { line.push({ ...it, ww }); lw += ww; } return; }
+      if (lw + ww > CW && line.length) { while (line.length && /^\s+$/.test(line[line.length - 1].w)) line.pop(); line = []; lines.push(line); lw = 0; }
+      line.push({ ...it, ww }); lw += ww; });
+    lines.forEach(Ln => { let x = M; Ln.forEach(it => { font(it.b); doc.text(it.w, x, y); x += it.ww; }); y += lh; });
+  };
+  font(true, 17); doc.text(clean(h.name), M, y + 6); y += 24;
+  font(false, 9.5); doc.setTextColor(70); doc.text(clean(h.line), M, y); doc.setTextColor(0); y += 8;
+  doc.setLineWidth(0.9); doc.line(M, y, W - M, y); y += 30;
+  ltrBlocks(L).forEach((b, i) => { b.forEach(t => wrap(i === 2 ? [{ t, b: true }] : ltrSegs(t))); if (i === ltrBlocks(L).length - 1) return; y += lh * 0.62; });
+  return doc.output("blob");
+}
+async function buildLetterDocx(L) {
+  const d = window.docx; if (!d) throw { message: "Word 组件没加载" };
+  const { Document, Packer, Paragraph, TextRun, BorderStyle } = d;
+  const F = "Arial", h = L.header || {};
+  const T = (text, o = {}) => new TextRun({ text, font: F, size: o.size || 22, bold: !!o.bold, color: o.color, break: o.br ? 1 : undefined });
+  const P = (runs, after = 200) => new Paragraph({ children: runs, spacing: { after, line: 300 } });
+  const kids = [
+    new Paragraph({ children: [T(h.name || "", { bold: true, size: 34 })], spacing: { after: 30 } }),
+    new Paragraph({ children: [T(h.line || "", { size: 18, color: "444444" })], spacing: { after: 360 }, border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: "000000", space: 4 } } }),
+    P([T(L.date || "")]),
+    P((L.to || []).map((t, i) => T(t, { br: i > 0 }))),
+    P([T(L.subject || "", { bold: true })]),
+    P([T(L.greeting || "")]),
+    ...(L.paras || []).map(p => P(ltrSegs(p).map(x => T(x.t, { bold: x.b })))),
+    P([T(L.closing || ""), T("", { br: true }), T(h.name || "", { br: true })]),
+  ];
+  const doc = new Document({ styles: { default: { document: { run: { font: F, size: 22 } } } },
+    sections: [{ properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1300, bottom: 1300, left: 1360, right: 1360 } } }, children: kids }] });
+  return Packer.toBlob(doc);
+}
+
+/* ---------- PDF (jsPDF, text-based for ATS) ---------- */
+function buildPdf(r) {
+  const { jsPDF } = window.jspdf;
+  const W = 612, H = 792, M = 40, CW = W - 2 * M;
+  const clean = s => String(s || "").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/[^\x09\x0A\x0D\x20-\x7E -ÿ–—•]/g, "");
+  function run(fs, draw) {
+    const doc = new jsPDF({ unit: "pt", format: "letter" });
+    let y = M; const lh = fs * 1.28;
+    const font = (b, size) => { doc.setFont("helvetica", b ? "bold" : "normal"); doc.setFontSize(size || fs); };
+    const wrapSegs = (segs, x0, width, indentFirst = 0) => {
+      const words = []; segs.forEach(sg => clean(sg.t).split(/(\s+)/).forEach(w => { if (w) words.push({ w, b: sg.b, c: sg.c }); }));
+      let lines = [[]], lineW = indentFirst;
+      words.forEach(it => { font(it.b); const ww = doc.getTextWidth(it.w); if (/^\s+$/.test(it.w)) { if (lines[lines.length - 1].length) { lines[lines.length - 1].push({ ...it, ww }); lineW += ww; } return; }
+        if (lineW + ww > width && lines[lines.length - 1].length) { const L = lines[lines.length - 1]; while (L.length && /^\s+$/.test(L[L.length - 1].w)) L.pop(); lines.push([]); lineW = 0; }
+        lines[lines.length - 1].push({ ...it, ww }); lineW += ww; });
+      lines.forEach((L, i) => { let x = x0 + (i === 0 ? indentFirst : 0); if (draw) L.forEach(it => { font(it.b); doc.setTextColor(it.c || 0); doc.text(it.w, x, y); x += it.ww; }); y += lh; });
+    };
+    const heading = t => { y += fs * 0.55; font(true, fs * 1.02); if (draw) { doc.setTextColor(0); doc.setCharSpace(0.9); doc.text(t.toUpperCase(), M, y); doc.setCharSpace(0); doc.setDrawColor(150); doc.setLineWidth(0.5); doc.line(M, y + 3, W - M, y + 3); } y += fs * 1.35; };
+    const bullet = (t, ind = 11) => { if (draw) { font(false); doc.setTextColor(0); doc.text("•", M + 2, y); } wrapSegs([{ t }], M + ind, CW - ind); y += fs * 0.08; };
+    const rightLine = (left, right) => { const yy = y; wrapSegs(left, M, CW - 120); if (draw) { font(false); doc.setTextColor(60); doc.text(clean(right), W - M, yy, { align: "right" }); } };
+    // header
+    font(true, fs * 1.9); y += fs * 1.2; if (draw) { doc.setTextColor(0); doc.text(clean(r.header?.name), M, y); } y += fs * 1.25;
+    font(false, fs * 0.92); if (draw) { doc.setTextColor(70); doc.text(clean(r.header?.line), M, y); } y += fs * 0.55;
+    if (draw) { doc.setDrawColor(0); doc.setLineWidth(1.1); doc.line(M, y, W - M, y); } y += fs * 0.6;
+    if (r.summary) { y += fs * 0.9; wrapSegs([{ t: r.summary }], M, CW); y -= fs * 0.3; }
+    const e = r.education || {};
+    heading("Education");
+    rightLine([{ t: e.school + ", ", b: true }, { t: e.place }], e.dates);
+    wrapSegs([{ t: e.program + "  |  " + e.gpa }], M, CW);
+    wrapSegs([{ t: "Relevant coursework: ", b: true }, { t: e.coursework }], M, CW);
+    if ((r.highlights || []).length) { heading("Highlights"); r.highlights.forEach(h => bullet(h.t)); }
+    heading("Technical Skills"); (r.skills || []).forEach(s => wrapSegs([{ t: s.k + ": ", b: true }, { t: s.v }], M, CW));
+    heading("Projects & Lab Experience");
+    if (r.projectsNote) wrapSegs([{ t: r.projectsNote, c: 70 }], M, CW);
+    (r.projects || []).forEach((p, i) => { if (i) y += fs * 0.25; wrapSegs([{ t: p.title + " ", b: true }, { t: "| " + p.course + " | " + p.tools, c: 70 }], M, CW); (p.bullets || []).forEach(b => bullet(b.t)); });
+    heading("Work Experience");
+    (r.work || []).forEach(w => { rightLine([{ t: w.org, b: true }, { t: " | " + w.role + ", " + w.place }], w.dates); (w.bullets || []).forEach(b => bullet(b.t)); });
+    heading("Additional"); (r.additional || []).forEach(a => bullet(a));
+    return { doc, y };
+  }
+  let fs = 10;
+  while (fs > 8.2 && run(fs, false).y > H - M + 4) fs -= 0.2;
+  return run(fs, true).doc.output("blob");
+}
+
+/* ---------- DOCX ---------- */
+async function buildDocx(r) {
+  const d = window.docx; if (!d) throw { message: "Word 组件没加载" };
+  const { Document, Packer, Paragraph, TextRun, TabStopType, BorderStyle } = d;
+  const SZ = 20, F = "Arial", RIGHT = 10500;
+  const T = (text, o = {}) => new TextRun({ text, font: F, size: o.size || SZ, bold: !!o.bold, color: o.color });
+  const P = (children, o = {}) => new Paragraph({ children, spacing: { after: o.after ?? 30, before: o.before ?? 0 }, tabStops: [{ type: TabStopType.RIGHT, position: RIGHT }], ...(o.extra || {}) });
+  const H = t => new Paragraph({ children: [T(t.toUpperCase(), { bold: true, size: 21 })], spacing: { before: 140, after: 50 }, border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: "999999", space: 1 } } });
+  const B = t => new Paragraph({ children: [T(t)], bullet: { level: 0 }, spacing: { after: 20 } });
+  const e = r.education || {};
+  const kids = [
+    P([T(r.header?.name || "", { bold: true, size: 38 })], { after: 20 }),
+    P([T(r.header?.line || "", { size: 18, color: "444444" })], { after: 60, extra: { border: { bottom: { style: BorderStyle.SINGLE, size: 10, color: "000000", space: 4 } } } }),
+    ...(r.summary ? [P([T(r.summary)], { before: 80 })] : []),
+    H("Education"),
+    P([T((e.school || "") + ", ", { bold: true }), T(e.place || ""), T("\t" + (e.dates || ""))]),
+    P([T((e.program || "") + "  |  " + (e.gpa || ""))]),
+    P([T("Relevant coursework: ", { bold: true }), T(e.coursework || "")]),
+    ...((r.highlights || []).length ? [H("Highlights"), ...r.highlights.map(h => B(h.t))] : []),
+    H("Technical Skills"), ...(r.skills || []).map(s => P([T(s.k + ": ", { bold: true }), T(s.v)])),
+    H("Projects & Lab Experience"),
+    ...(r.projectsNote ? [P([T(r.projectsNote, { color: "444444" })])] : []),
+    ...(r.projects || []).flatMap(p => [P([T(p.title + " ", { bold: true }), T("| " + p.course + " | " + p.tools, { color: "444444" })], { before: 60 }), ...(p.bullets || []).map(b => B(b.t))]),
+    H("Work Experience"),
+    ...(r.work || []).flatMap(w => [P([T(w.org, { bold: true }), T(" | " + w.role + ", " + w.place), T("\t" + w.dates)]), ...(w.bullets || []).map(b => B(b.t))]),
+    H("Additional"), ...(r.additional || []).map(a => B(a)),
+  ];
+  const doc = new Document({ styles: { default: { document: { run: { font: F, size: SZ } } } },
+    sections: [{ properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 760, bottom: 760, left: 860, right: 860 } } }, children: kids }] });
+  return Packer.toBlob(doc);
+}
+
+boot();
+})();
+</script>
