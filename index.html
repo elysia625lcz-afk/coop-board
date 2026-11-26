@@ -1,3 +1,7 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
 <title>Co-op 投递台</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -182,7 +186,7 @@ details.box[open]>summary::before{transform:rotate(90deg)}
 </style>
 
 <header class="top"><div class="wrap">
-  <div class="brand">Co-op 投递台 <small>CHENGZHANG LYU · EET · 2027</small></div>
+  <div class="brand">Co-op 投递台 <small id="brandSub">EET · 2027</small></div>
   <div class="runline" id="runline"><span>读取数据中…</span></div>
 </div></header>
 
@@ -194,7 +198,7 @@ details.box[open]>summary::before{transform:rotate(90deg)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="backend.js"></script>
+<script src="backend.js" charset="utf-8"></script>
 <script>
 (() => {
 "use strict";
@@ -300,6 +304,7 @@ window.addEventListener("hashchange", () => {
 function route() { const h = location.hash.slice(1); return h.startsWith("job-") ? { view: "job", id: h.slice(4) } : { view: "board" }; }
 
 function render() {
+  { const p = (S.meta && S.meta.profile) || {}, b = document.getElementById("brandSub"); if (b && p.short) b.textContent = p.short.toUpperCase() + " · EET · 2027"; }
   renderRunline();
   if (!S.loaded) return;
   const r = route();

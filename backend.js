@@ -115,7 +115,7 @@
   /* ---------- 登录 ---------- */
   function loginForm(resolve) {
     const box = document.createElement("div");
-    box.id = "coopLogin";
+    box.id = "coopLogin"; box.style.cssText = "position:fixed;inset:0;z-index:40;background:var(--bg);overflow:auto";
     box.innerHTML = `<div class="panel" style="max-width:380px;margin:12vh auto;padding:20px">
       <b style="font-size:17px">登录 Co-op 投递台</b>
       <p class="muted" style="font-size:13px;margin:6px 0 14px">用 Life OS 的同一个账号。登录一次后，这台设备会记住。</p>
